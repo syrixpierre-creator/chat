@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SYRIX CHAT — Admin</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #16213a;
+    --surface-alt: #1c2b4a;
+    --primary: #4c8bf5;
+    --primary-dark: #3a6fd6;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --border: #23324f;
+    --danger: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .center-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+  }
+  .logo {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .logo .mark {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 10px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 20px;
+  }
+  .logo .title { font-size: 18px; font-weight: 700; }
+  .logo .tagline { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input {
+    width: 100%;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+  input:focus { outline: none; border-color: var(--primary); }
+  button {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:hover { background: var(--primary-dark); }
+  button.secondary { background: var(--surface-alt); border: 1px solid var(--border); }
+  button.danger { background: var(--danger); }
+  .step-label { font-size: 12px; color: var(--muted); margin-bottom: 16px; text-align: center; }
+  .error {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.4);
+    color: #fca5a5;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  .dashboard { max-width: 1000px; margin: 0 auto; padding: 24px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .topbar .brand { font-weight: 700; font-size: 16px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .stat-card .value { font-size: 24px; font-weight: 800; }
+  .stat-card .label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  th, td { text-align: left; padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .badge.admin { background: rgba(76,139,245,0.2); color: var(--primary); }
+  .badge.verified { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .badge.unverified { background: rgba(148,163,184,0.15); color: var(--muted); }
+  .badge.premium { background: rgba(108,92,231,0.2); color: #a78bfa; }
+  .premium-toggle { background: transparent; border: 1px solid var(--border); color: var(--text); width: auto; padding: 6px 12px; font-size: 12px; border-radius: 8px; cursor: pointer; }
+  .section-title { font-size: 14px; font-weight: 700; margin: 28px 0 12px; }
+  .row { display: flex; gap: 10px; }
+  .row input { flex: 1; }
+  .row button { width: auto; padding: 12px 20px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const API = window.location.origin + "/api";
+const app = document.getElementById("app");
+
+function logoBlock(tagline) {
+  return `<div class="logo">
+    <div class="mark">S</div>
+    <div class="title">SYRIX CHAT — Admin</div>
+    ${tagline ? `<div class="tagline">${tagline}</div>` : ""}
+  </div>`;
+}
+
+async function api(path, options) {
+  const token = localStorage.getItem("syrix_admin_token");
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(API + path, { ...options, headers: { ...headers, ...(options && options.headers) } });
+  const body = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, body };
+}
+
+async function boot() {
+  const status = await api("/setup/status");
+  if (!status.body.adminCreated) {
+    renderCreateAdmin();
+    return;
+  }
+  const token = localStorage.getItem("syrix_admin_token");
+  if (!token) {
+    renderLogin();
+    return;
+  }
+  renderDashboard();
+}
+
+function renderCreateAdmin() {
+  app.innerHTML = `
+    <div class="center-screen">
+      <div class="card">
+        ${logoBlock("Made in by Syrix Vision")}
+        <div class="step-label">Step 1 of 2 — Create the admin account</div>
+        <div id="error-slot"></div>
+        <label>Username</label>
+        <input id="username" type="text" />
+        <label>Email</label>
+        <input id="email" type="email" />
+        <label>Password</label>
+        <input id="password" type="password" />
+        <button id="submit-btn">Create admin account</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("submit-btn").onclick = async () => {
+    const username = document.getElementById("username").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const result = await api("/setup/init", {
+      method: "POST",
+      body: JSON.stringify({ username, email, password })
+    });
+    if (!result.ok) {
+      document.getElementById("error-slot").innerHTML = `<div class="error">Could not create admin account. Check the fields and try again.</div>`;
+      return;
+    }
+    localStorage.setItem("syrix_admin_token", result.body.token);
+    renderSetDomain();
+  };
+}
+
+function renderSetDomain() {
+  app.innerHTML = `
+    <div class="center-screen">
+      <div class="card">
+        ${logoBlock("Made in by Syrix Vision")}
+        <div class="step-label">Step 2 of 2 — Attach your domain</div>
+        <div id="error-slot"></div>
+        <label>Site name</label>
+        <input id="siteName" type="text" value="SYRIX CHAT" />
+        <label>Domain (e.g. chat.example.com)</label>
+        <input id="domain" type="text" placeholder="chat.example.com" />
+        <button id="submit-btn">Finish setup</button>
+        <div style="text-align:center; margin-top:12px;">
+          <button class="secondary" id="skip-btn" style="margin-top:6px;">Skip for now</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById("submit-btn").onclick = async () => {
+    const domain = document.getElementById("domain").value.trim();
+    const siteName = document.getElementById("siteName").value.trim();
+    if (!domain) {
+      document.getElementById("error-slot").innerHTML = `<div class="error">Enter a domain, or use "Skip for now".</div>`;
+      return;
+    }
+    const result = await api("/setup/domain", {
+      method: "POST",
+      body: JSON.stringify({ domain, siteName })
+    });
+    if (!result.ok) {
+      document.getElementById("error-slot").innerHTML = `<div class="error">Could not save the domain.</div>`;
+      return;
+    }
+    renderDashboard();
+  };
+  document.getElementById("skip-btn").onclick = () => renderDashboard();
+}
+
+function renderLogin() {
+  app.innerHTML = `
+    <div class="center-screen">
+      <div class="card">
+        ${logoBlock("Admin login")}
+        <div id="error-slot"></div>
+        <label>Email</label>
+        <input id="email" type="email" />
+        <label>Password</label>
+        <input id="password" type="password" />
+        <button id="submit-btn">Log in</button>
+      </div>
+    </div>
+  `;
+  document.getElementById("submit-btn").onclick = async () => {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const result = await api("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password })
+    });
+    if (!result.ok) {
+      document.getElementById("error-slot").innerHTML = `<div class="error">Invalid email or password.</div>`;
+      return;
+    }
+    if (!result.body.user || !result.body.user.isAdmin) {
+      document.getElementById("error-slot").innerHTML = `<div class="error">This account does not have admin access.</div>`;
+      return;
+    }
+    localStorage.setItem("syrix_admin_token", result.body.token);
+    renderDashboard();
+  };
+}
+
+async function renderDashboard() {
+  app.innerHTML = `
+    <div class="dashboard">
+      <div class="topbar">
+        <div class="brand">SYRIX CHAT — Admin</div>
+        <button class="secondary" id="logout-btn" style="width:auto; padding:8px 16px;">Log out</button>
+      </div>
+      <div id="stats" class="stats-grid"></div>
+      <div class="section-title">Domain</div>
+      <div class="card" style="max-width:none;">
+        <div class="row">
+          <input id="domain-input" type="text" placeholder="chat.example.com" />
+          <button id="save-domain-btn">Save</button>
+        </div>
+      </div>
+      <div class="section-title">Users</div>
+      <table>
+        <thead>
+          <tr><th>Username</th><th>Email</th><th>Status</th><th>Premium</th><th>Wallet</th><th>Joined</th></tr>
+        </thead>
+        <tbody id="users-body"></tbody>
+      </table>
+    </div>
+  `;
+
+  document.getElementById("logout-btn").onclick = () => {
+    localStorage.removeItem("syrix_admin_token");
+    boot();
+  };
+
+  const statsResult = await api("/admin/stats");
+  if (statsResult.status === 401 || statsResult.status === 403) {
+    localStorage.removeItem("syrix_admin_token");
+    boot();
+    return;
+  }
+  const s = statsResult.body;
+  document.getElementById("stats").innerHTML = `
+    <div class="stat-card"><div class="value">${s.userCount}</div><div class="label">Users</div></div>
+    <div class="stat-card"><div class="value">${s.verifiedCount}</div><div class="label">Verified</div></div>
+    <div class="stat-card"><div class="value">${s.conversationCount}</div><div class="label">Conversations</div></div>
+    <div class="stat-card"><div class="value">${s.messageCount}</div><div class="label">Messages</div></div>
+    <div class="stat-card"><div class="value">${s.activeLiveCount}</div><div class="label">Live now</div></div>
+    <div class="stat-card"><div class="value">${s.activeStoryCount}</div><div class="label">Active stories</div></div>
+  `;
+
+  const status = await api("/setup/status");
+  document.getElementById("domain-input").value = status.body.domain || "";
+  document.getElementById("save-domain-btn").onclick = async () => {
+    const domain = document.getElementById("domain-input").value.trim();
+    if (!domain) return;
+    await api("/setup/domain", { method: "POST", body: JSON.stringify({ domain }) });
+  };
+
+  const usersResult = await api("/admin/users");
+  const rows = usersResult.body.users.map((u) => `
+    <tr>
+      <td>${u.username} ${u.isAdmin ? '<span class="badge admin">admin</span>' : ""}</td>
+      <td>${u.email}</td>
+      <td>${u.isEmailVerified ? '<span class="badge verified">verified</span>' : '<span class="badge unverified">unverified</span>'}</td>
+      <td>
+        ${u.isPremium ? '<span class="badge premium">premium</span>' : ""}
+        <button class="premium-toggle" data-user-id="${u.id}" data-premium="${u.isPremium}">${u.isPremium ? "Revoke" : "Grant"}</button>
+      </td>
+      <td>${u.walletBalance}</td>
+      <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+    </tr>
+  `).join("");
+  document.getElementById("users-body").innerHTML = rows;
+
+  document.querySelectorAll(".premium-toggle").forEach((btn) => {
+    btn.onclick = async () => {
+      const userId = btn.getAttribute("data-user-id");
+      const current = btn.getAttribute("data-premium") === "true";
+      btn.disabled = true;
+      await api(`/admin/users/${userId}/premium`, {
+        method: "PATCH",
+        body: JSON.stringify({ isPremium: !current })
+      });
+      renderDashboard();
+    };
+  });
+}
+
+boot();
+</script>
+</body>
+</html>

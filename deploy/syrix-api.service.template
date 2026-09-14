@@ -1,0 +1,15 @@
+[Unit]
+Description=SYRIX CHAT API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__PROJECT_DIR__/apps/api
+EnvironmentFile=__PROJECT_DIR__/apps/api/.env
+ExecStart=/usr/bin/node dist/server.js
+Restart=always
+RestartSec=5
+User=__SERVICE_USER__
+
+[Install]
+WantedBy=multi-user.target

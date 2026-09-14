@@ -1,0 +1,64 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    container_name: syrix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: syrix
+      POSTGRES_PASSWORD: syrix_dev_password
+      POSTGRES_DB: syrix_chat
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - syrix-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U syrix -d syrix_chat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    container_name: syrix-mongo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - syrix-mongo-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: syrix-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - syrix-redis-data:/data
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: syrix-livekit
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./deploy/livekit-prod.yaml:/etc/livekit.yaml:ro
+      - __LETSENCRYPT_DIR__:/etc/livekit-certs:ro
+    ports:
+      - "127.0.0.1:3020:7880"
+      - "3010:5349"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: syrix-ollama
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - syrix-ollama-data:/root/.ollama
+
+volumes:
+  syrix-postgres-data:
+  syrix-mongo-data:
+  syrix-redis-data:
+  syrix-ollama-data:

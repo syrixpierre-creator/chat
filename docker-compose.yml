@@ -1,0 +1,78 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    container_name: syrix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: syrix
+      POSTGRES_PASSWORD: syrix_dev_password
+      POSTGRES_DB: syrix_chat
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - syrix-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U syrix -d syrix_chat"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    container_name: syrix-mongo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - syrix-mongo-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: syrix-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - syrix-redis-data:/data
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: syrix-livekit
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./deploy/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+      - "50000-50100:50000-50100/udp"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: syrix-ollama
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:11434:11434"
+    volumes:
+      - syrix-ollama-data:/root/.ollama
+
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    container_name: syrix-whisper
+    restart: unless-stopped
+    environment:
+      ASR_MODEL: base
+      ASR_ENGINE: faster_whisper
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - syrix-whisper-data:/root/.cache
+
+volumes:
+  syrix-postgres-data:
+  syrix-mongo-data:
+  syrix-redis-data:
+  syrix-ollama-data:
+  syrix-whisper-data:

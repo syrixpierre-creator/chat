@@ -1,0 +1,11 @@
+{
+  "name": "syrix-chat",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/api"
+  ],
+  "scripts": {
+    "setup": "bash setup.sh"
+  }
+}

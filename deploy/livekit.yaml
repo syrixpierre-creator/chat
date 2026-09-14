@@ -1,0 +1,7 @@
+port: 7880
+rtc:
+  use_external_ip: true
+keys:
+  syrixdevkey: syrixdevsecret_change_me_before_prod
+turn:
+  enabled: false

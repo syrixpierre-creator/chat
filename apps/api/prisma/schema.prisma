@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  username           String   @unique
+  email              String   @unique
+  passwordHash       String
+  locale             String   @default("en")
+  bio                String?
+  avatarUrl          String?
+  bannerUrl          String?
+  location           String?
+  birthDate          DateTime?
+  isEmailVerified    Boolean  @default(false)
+  usernameSet        Boolean  @default(false)
+  isPremium          Boolean  @default(false)
+  premiumExpiresAt   DateTime?
+  isAdmin            Boolean  @default(false)
+  isBot              Boolean  @default(false)
+  walletBalance      Int      @default(0)
+  profileVisibility  String   @default("everyone")
+  birthDateVisibility String  @default("hidden")
+  storyVisibility    String   @default("everyone")
+  dmPrice            Int      @default(0)
+  awayEnabled        Boolean  @default(false)
+  awayMessage        String?
+  quickReplies       Json?
+  createdAt          DateTime @default(now())
+
+  walletTransactions WalletTransaction[]
+  sessions           Session[]
+  contactsOwned      Contact[] @relation("ContactOwner")
+  contactsOf         Contact[] @relation("ContactTarget")
+  ownedBots          DeveloperBot[] @relation("BotOwner")
+  botAccount         DeveloperBot?  @relation("BotAccount")
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceInfo String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  ownerId   String
+  contactId String
+  alias     String?
+  tag       String?
+  createdAt DateTime @default(now())
+
+  owner   User @relation("ContactOwner", fields: [ownerId], references: [id])
+  contact User @relation("ContactTarget", fields: [contactId], references: [id])
+
+  @@unique([ownerId, contactId])
+}
+
+model WalletTransaction {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  amount    Int
+  createdAt DateTime @default(now())
+}
+
+model AppConfig {
+  id        Int      @id @default(1)
+  siteName  String   @default("SYRIX CHAT")
+  domain    String?
+  updatedAt DateTime @updatedAt
+}
+
+model DeveloperBot {
+  id          String   @id @default(uuid())
+  ownerId     String
+  owner       User     @relation("BotOwner", fields: [ownerId], references: [id])
+  botUserId   String   @unique
+  botUser     User     @relation("BotAccount", fields: [botUserId], references: [id])
+  name        String
+  tokenHash   String
+  tokenPrefix String
+  webhookUrl  String?
+  createdAt   DateTime @default(now())
+}

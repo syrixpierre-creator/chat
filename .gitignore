@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+apps/api/.env
+apps/api/dist
+apps/api/uploads/*
+!apps/api/uploads/.gitkeep
+apps/api/public/downloads/*
+!apps/api/public/downloads/.gitkeep
+apps/mobile/build
+apps/mobile/.dart_tool
+apps/mobile/dist
+apps/mobile/android/key.properties
+apps/mobile/android/app/*.jks
+apps/mobile/.env.build
+docker-compose.prod.yml
+deploy/livekit-prod.yaml
