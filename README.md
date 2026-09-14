@@ -1,4 +1,4 @@
-# SYRIX CHAT — Day 1 (v2 : Postgres + MongoDB + Redis + Flutter)
+# SYRIX CHAT
 
 ## Rôle de chaque base de données
 
