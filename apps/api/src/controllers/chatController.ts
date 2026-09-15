@@ -1,6 +1,7 @@
 import { Response } from "express";
 import crypto from "crypto";
 import Conversation from "../models/Conversation.js";
+import Message from "../models/Message.js";
 import AuditLog from "../models/AuditLog.js";
 import { prisma } from "../config/postgres.js";
 import { AuthedRequest } from "../middleware/auth.js";
@@ -231,7 +232,12 @@ export async function getConversationDetails(req: AuthedRequest, res: Response) 
     selfDestructSeconds: conversation.selfDestructSeconds,
     aiModerationEnabled: conversation.aiModerationEnabled,
     closedGroup: conversation.closedGroup,
-    inviteCode: isCreator ? conversation.inviteCode : undefined,
+    whoCanAddGroups: (conversation as any).whoCanAddGroups || "admins",
+    whoCanSendMessages: (conversation as any).whoCanSendMessages || "everyone",
+    whoCanEditInfo: (conversation as any).whoCanEditInfo || "everyone",
+    whoCanAddMembers: (conversation as any).whoCanAddMembers || "everyone",
+    approveNewMembers: Boolean((conversation as any).approveNewMembers),
+    inviteCode: isCreator || conversation.adminIds.includes(userId) ? conversation.inviteCode : undefined,
     isCreator,
     isAdmin: isCreator || conversation.adminIds.includes(userId),
     memberCount: conversation.participantIds.length
@@ -241,30 +247,78 @@ export async function getConversationDetails(req: AuthedRequest, res: Response) 
 export async function updateConversationSettings(req: AuthedRequest, res: Response) {
   const userId = req.user!.id;
   const { conversationId } = req.params;
-  const { name, isPrivate, messagePrice, description, avatarUrl } = req.body;
+  const {
+    name,
+    isPrivate,
+    messagePrice,
+    description,
+    avatarUrl,
+    whoCanAddGroups,
+    whoCanSendMessages,
+    whoCanEditInfo,
+    whoCanAddMembers,
+    approveNewMembers
+  } = req.body;
 
   const conversation = await Conversation.findById(conversationId);
-  if (!conversation || conversation.creatorId !== userId) {
+  if (!conversation) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const isCreator = conversation.creatorId === userId;
+  const isAdmin = isCreator || conversation.adminIds.includes(userId);
+
+  // If whoCanEditInfo is "admins" or "everyone", check permissions
+  if (!isAdmin && (conversation as any).whoCanEditInfo === "admins") {
+    return res.status(403).json({ error: "forbidden" });
+  }
+  if (!conversation.participantIds.includes(userId)) {
     return res.status(403).json({ error: "forbidden" });
   }
 
   if (typeof name === "string" && name.trim()) {
     conversation.name = name.trim();
   }
-  if (typeof isPrivate === "boolean") {
+  if (typeof isPrivate === "boolean" && isAdmin) {
     conversation.isPrivate = isPrivate;
   }
-  if (typeof messagePrice === "number" && messagePrice >= 0) {
+  if (typeof messagePrice === "number" && messagePrice >= 0 && isAdmin) {
     conversation.messagePrice = Math.floor(messagePrice);
   }
   if (typeof description === "string") {
-    conversation.description = description.slice(0, 300);
+    conversation.description = description.slice(0, 500);
   }
   if (typeof avatarUrl === "string") {
     conversation.avatarUrl = avatarUrl;
   }
+  if (isAdmin) {
+    if (whoCanAddGroups === "admins" || whoCanAddGroups === "everyone") {
+      (conversation as any).whoCanAddGroups = whoCanAddGroups;
+    }
+    if (whoCanSendMessages === "admins" || whoCanSendMessages === "everyone") {
+      (conversation as any).whoCanSendMessages = whoCanSendMessages;
+      conversation.closedGroup = whoCanSendMessages === "admins";
+    }
+    if (whoCanEditInfo === "admins" || whoCanEditInfo === "everyone") {
+      (conversation as any).whoCanEditInfo = whoCanEditInfo;
+    }
+    if (whoCanAddMembers === "admins" || whoCanAddMembers === "everyone") {
+      (conversation as any).whoCanAddMembers = whoCanAddMembers;
+    }
+    if (typeof approveNewMembers === "boolean") {
+      (conversation as any).approveNewMembers = approveNewMembers;
+    }
+  }
 
   await conversation.save();
+
+  await broadcastToUsers(conversation.participantIds, {
+    messageEvent: "conversationUpdated",
+    conversationId: conversation._id,
+    name: conversation.name,
+    avatarUrl: conversation.avatarUrl,
+    description: conversation.description
+  });
 
   return res.json({
     id: conversation._id,
@@ -272,7 +326,12 @@ export async function updateConversationSettings(req: AuthedRequest, res: Respon
     isPrivate: conversation.isPrivate,
     messagePrice: conversation.messagePrice,
     description: conversation.description,
-    avatarUrl: conversation.avatarUrl
+    avatarUrl: conversation.avatarUrl,
+    whoCanAddGroups: (conversation as any).whoCanAddGroups,
+    whoCanSendMessages: (conversation as any).whoCanSendMessages,
+    whoCanEditInfo: (conversation as any).whoCanEditInfo,
+    whoCanAddMembers: (conversation as any).whoCanAddMembers,
+    approveNewMembers: (conversation as any).approveNewMembers
   });
 }
 
@@ -285,7 +344,12 @@ export async function uploadGroupPhoto(req: AuthedRequest, res: Response) {
   }
 
   const conversation = await Conversation.findById(conversationId);
-  if (!conversation || conversation.creatorId !== userId) {
+  if (!conversation) {
+    return res.status(404).json({ error: "not_found" });
+  }
+  const isCreator = conversation.creatorId === userId;
+  const isAdmin = isCreator || conversation.adminIds.includes(userId);
+  if (!isAdmin && (conversation as any).whoCanEditInfo === "admins") {
     return res.status(403).json({ error: "forbidden" });
   }
 
@@ -294,7 +358,42 @@ export async function uploadGroupPhoto(req: AuthedRequest, res: Response) {
   conversation.avatarUrl = avatarUrl;
   await conversation.save();
 
+  await broadcastToUsers(conversation.participantIds, {
+    messageEvent: "conversationAvatarUpdated",
+    conversationId: conversation._id,
+    avatarUrl
+  });
+
   return res.status(201).json({ avatarUrl });
+}
+
+export async function deleteConversation(req: AuthedRequest, res: Response) {
+  const userId = req.user!.id;
+  const { conversationId } = req.params;
+
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) {
+    return res.status(404).json({ error: "not_found" });
+  }
+
+  const isCreator = conversation.creatorId === userId;
+  const isAdmin = isCreator || conversation.adminIds.includes(userId);
+  if (!isAdmin) {
+    return res.status(403).json({ error: "forbidden" });
+  }
+
+  await Message.deleteMany({ conversationId });
+  if (conversation.type === "community") {
+    await Conversation.updateMany({ communityId: conversationId }, { $unset: { communityId: 1 } });
+  }
+  await Conversation.findByIdAndDelete(conversationId);
+
+  await broadcastToUsers(conversation.participantIds, {
+    messageEvent: "conversationDeleted",
+    conversationId
+  });
+
+  return res.json({ ok: true });
 }
 
 export async function updateModeration(req: AuthedRequest, res: Response) {
@@ -372,13 +471,33 @@ export async function joinByInviteCode(req: AuthedRequest, res: Response) {
   return res.json({ id: conversation._id, name: conversation.name, type: conversation.type });
 }
 
+export async function joinGroupDirect(req: AuthedRequest, res: Response) {
+  const userId = req.user!.id;
+  const { conversationId } = req.params;
+
+  const conversation = await Conversation.findById(conversationId);
+  if (!conversation) {
+    return res.status(404).json({ error: "not_found" });
+  }
+  if (conversation.bannedUserIds?.includes(userId)) {
+    return res.status(403).json({ error: "banned" });
+  }
+
+  if (!conversation.participantIds.includes(userId)) {
+    conversation.participantIds.push(userId);
+    await conversation.save();
+  }
+
+  return res.json({ id: conversation._id, name: conversation.name, type: conversation.type });
+}
+
 async function getUserSummaries(userIds: string[]) {
   const users = await prisma.user.findMany({ where: { id: { in: userIds } } });
   const byId = new Map(users.map((u) => [u.id, u]));
   return byId;
 }
 
-function isGroupAdmin(conversation: { creatorId?: string; adminIds: string[] }, userId: string) {
+function isGroupAdmin(conversation: { creatorId?: string | null; adminIds: string[] }, userId: string) {
   return conversation.creatorId === userId || conversation.adminIds.includes(userId);
 }
 

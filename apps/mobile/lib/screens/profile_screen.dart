@@ -50,6 +50,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int walletBalance = 0;
   bool loading = true;
   bool pinEnabled = false;
+  String userStatus = "online"; // online, idle, dnd, invisible
+
+  void openStatusPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: SyrixColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Statut de présence",
+                  style: TextStyle(
+                    color: SyrixColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _statusTile("online", "En ligne", const Color(0xFF10B981)),
+                _statusTile("idle", "Absent", const Color(0xFFF59E0B)),
+                _statusTile("dnd", "Ne pas déranger", const Color(0xFFEF4444)),
+                _statusTile("invisible", "Invisible", const Color(0xFF6B7280)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _statusTile(String code, String label, Color color) {
+    final selected = userStatus == code;
+    return ListTile(
+      leading: Container(
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(color: color.withOpacity(0.5), blurRadius: 6),
+          ],
+        ),
+      ),
+      title: Text(label, style: const TextStyle(color: SyrixColors.textPrimary, fontWeight: FontWeight.w600)),
+      trailing: selected ? const Icon(Icons.check_rounded, color: SyrixColors.cyan) : null,
+      onTap: () {
+        setState(() => userStatus = code);
+        Navigator.pop(context);
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -268,6 +327,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   isPremium: isPremium,
                   badgeSize: 16,
                   style: const TextStyle(color: SyrixColors.textPrimary, fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                // Status selector pill
+                GestureDetector(
+                  onTap: openStatusPicker,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: SyrixColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: SyrixColors.border),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: userStatus == "online"
+                                ? const Color(0xFF10B981)
+                                : userStatus == "idle"
+                                    ? const Color(0xFFF59E0B)
+                                    : userStatus == "dnd"
+                                        ? const Color(0xFFEF4444)
+                                        : const Color(0xFF6B7280),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          userStatus == "online"
+                              ? "En ligne"
+                              : userStatus == "idle"
+                                  ? "Absent"
+                                  : userStatus == "dnd"
+                                      ? "Ne pas déranger"
+                                      : "Invisible",
+                          style: const TextStyle(color: SyrixColors.textPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.keyboard_arrow_down_rounded, size: 14, color: SyrixColors.textMuted),
+                      ],
+                    ),
+                  ),
                 ),
                 if (!isPremium) ...[
                   const SizedBox(height: 10),
@@ -510,6 +614,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             child: Column(
               children: [
+                ListTile(
+                  leading: const Icon(Icons.dark_mode_rounded, color: SyrixColors.cyan),
+                  title: const Text("Thème de l'application", style: TextStyle(color: SyrixColors.textPrimary)),
+                  subtitle: const Text("Sombre Néon Cyber (#13111C)", style: TextStyle(color: SyrixColors.textMuted, fontSize: 12)),
+                  trailing: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: SyrixColors.neonPurple.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: SyrixColors.neonPurple.withOpacity(0.5)),
+                    ),
+                    child: const Text("ACTIF", style: TextStyle(color: SyrixColors.cyan, fontSize: 10, fontWeight: FontWeight.w800)),
+                  ),
+                ),
+                const Divider(height: 1, color: SyrixColors.border),
                 ListTile(
                   leading: const Icon(Icons.tune_rounded, color: SyrixColors.textMuted),
                   title: Text(t("personalization_title"), style: const TextStyle(color: SyrixColors.textPrimary)),

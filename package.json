@@ -3,9 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "workspaces": [
-    "apps/api"
+    "apps/*"
   ],
   "scripts": {
+    "dev": "npm run dev --workspace=@syrix/api",
+    "build": "npm run build --workspace=@syrix/api",
+    "start": "npm run start --workspace=@syrix/api",
     "setup": "bash setup.sh"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^8.0.1",
+    "tsx": "^4.23.13"
   }
 }

@@ -38,12 +38,49 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> addContact() async {
-    final response = await ApiClient.addContact(widget.userId);
+    final t = widget.localeController.t;
+    final aliasController = TextEditingController(text: profile?["username"] ?? "");
+    final alias = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SyrixColors.surface,
+        title: Text(t("contact_add_title"), style: const TextStyle(color: SyrixColors.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("@${profile?["username"] ?? ""}", style: const TextStyle(color: SyrixColors.textMuted, fontSize: 13)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: aliasController,
+              autofocus: true,
+              style: const TextStyle(color: SyrixColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: t("contact_add_hint_alias"),
+                labelStyle: const TextStyle(color: SyrixColors.textMuted),
+                filled: true,
+                fillColor: SyrixColors.surfaceAlt,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: SyrixColors.border)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(t("profile_cancel"))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, aliasController.text.trim()),
+            child: Text(t("contact_add_save")),
+          ),
+        ],
+      ),
+    );
+    if (alias == null) return;
+    final response = await ApiClient.addContact(widget.userId, alias: alias.isNotEmpty ? alias : null);
     if (response.statusCode == 200 || response.statusCode == 201) {
       setState(() => contactAdded = true);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.localeController.t("chat_contact_added"))),
+          SnackBar(content: Text(t("contact_add_success"))),
         );
       }
     }

@@ -28,6 +28,21 @@ export async function markAllNotificationsRead(req: AuthedRequest, res: Response
   return res.json({ ok: true });
 }
 
+export async function deleteNotification(req: AuthedRequest, res: Response) {
+  const userId = req.user!.id;
+  const { notificationId } = req.params;
+
+  await Notification.deleteOne({ _id: notificationId, userId });
+  return res.json({ ok: true });
+}
+
+export async function clearAllNotifications(req: AuthedRequest, res: Response) {
+  const userId = req.user!.id;
+
+  await Notification.deleteMany({ userId });
+  return res.json({ ok: true });
+}
+
 export async function createNotification(params: {
   userId: string;
   type: "mention" | "contact_added" | "reaction" | "gift";

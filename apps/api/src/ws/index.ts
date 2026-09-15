@@ -32,7 +32,7 @@ export function setupWebSocketServer(httpServer: Server) {
   });
 
   redisSubscriber.subscribe(MESSAGES_CHANNEL);
-  redisSubscriber.on("message", (_channel, raw) => {
+  redisSubscriber.on("message", (_channel: string, raw: string) => {
     const payload = JSON.parse(raw);
     const recipientIds: string[] = payload.participantIds || [];
     for (const recipientId of recipientIds) {

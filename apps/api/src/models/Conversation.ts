@@ -20,6 +20,11 @@ const conversationSchema = new mongoose.Schema(
     adminIds: { type: [String], default: [] },
     bannedUserIds: { type: [String], default: [] },
     closedGroup: { type: Boolean, default: false },
+    whoCanAddGroups: { type: String, enum: ["admins", "everyone"], default: "admins" },
+    whoCanSendMessages: { type: String, enum: ["admins", "everyone"], default: "everyone" },
+    whoCanEditInfo: { type: String, enum: ["admins", "everyone"], default: "everyone" },
+    whoCanAddMembers: { type: String, enum: ["admins", "everyone"], default: "everyone" },
+    approveNewMembers: { type: Boolean, default: false },
     lastMessage: {
       content: { type: String },
       senderId: { type: String },

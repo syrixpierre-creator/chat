@@ -146,6 +146,11 @@ class ApiClient {
     return http.get(Uri.parse("$baseUrl/chats/$communityId/groups"), headers: headers);
   }
 
+  static Future<http.Response> joinGroupDirect(String conversationId) async {
+    final headers = await _headers(withAuth: true);
+    return http.post(Uri.parse("$baseUrl/chats/$conversationId/join"), headers: headers);
+  }
+
   static Future<http.Response> getNearbySuggestions() async {
     final headers = await _headers(withAuth: true);
     return http.get(Uri.parse("$baseUrl/users/nearby"), headers: headers);
@@ -251,9 +256,24 @@ class ApiClient {
     return http.get(Uri.parse("$baseUrl/notifications"), headers: headers);
   }
 
+  static Future<http.Response> markNotificationRead(String notificationId) async {
+    final headers = await _headers(withAuth: true);
+    return http.post(Uri.parse("$baseUrl/notifications/$notificationId/read"), headers: headers);
+  }
+
   static Future<http.Response> markAllNotificationsRead() async {
     final headers = await _headers(withAuth: true);
     return http.post(Uri.parse("$baseUrl/notifications/read-all"), headers: headers);
+  }
+
+  static Future<http.Response> deleteNotification(String notificationId) async {
+    final headers = await _headers(withAuth: true);
+    return http.delete(Uri.parse("$baseUrl/notifications/$notificationId"), headers: headers);
+  }
+
+  static Future<http.Response> clearAllNotifications() async {
+    final headers = await _headers(withAuth: true);
+    return http.delete(Uri.parse("$baseUrl/notifications"), headers: headers);
   }
 
   static Future<http.Response> listMessages(String conversationId) async {
@@ -506,6 +526,11 @@ class ApiClient {
     bool? isPrivate,
     int? messagePrice,
     String? description,
+    String? whoCanAddGroups,
+    String? whoCanSendMessages,
+    String? whoCanEditInfo,
+    String? whoCanAddMembers,
+    bool? approveNewMembers,
   }) async {
     final headers = await _headers(withAuth: true);
     final body = <String, dynamic>{};
@@ -513,11 +538,21 @@ class ApiClient {
     if (isPrivate != null) body["isPrivate"] = isPrivate;
     if (messagePrice != null) body["messagePrice"] = messagePrice;
     if (description != null) body["description"] = description;
+    if (whoCanAddGroups != null) body["whoCanAddGroups"] = whoCanAddGroups;
+    if (whoCanSendMessages != null) body["whoCanSendMessages"] = whoCanSendMessages;
+    if (whoCanEditInfo != null) body["whoCanEditInfo"] = whoCanEditInfo;
+    if (whoCanAddMembers != null) body["whoCanAddMembers"] = whoCanAddMembers;
+    if (approveNewMembers != null) body["approveNewMembers"] = approveNewMembers;
     return http.patch(
       Uri.parse("$baseUrl/chats/$conversationId/settings"),
       headers: headers,
       body: jsonEncode(body),
     );
+  }
+
+  static Future<http.Response> deleteConversation(String conversationId) async {
+    final headers = await _headers(withAuth: true);
+    return http.delete(Uri.parse("$baseUrl/chats/$conversationId"), headers: headers);
   }
 
   static Future<http.StreamedResponse> uploadGroupPhoto(String conversationId, String filePath) async {
@@ -706,12 +741,16 @@ class ApiClient {
     return http.post(Uri.parse("$baseUrl/chats/join/$inviteCode"), headers: headers);
   }
 
-  static Future<http.Response> addContact(String contactId) async {
+  static Future<http.Response> addContact(String contactId, {String? alias}) async {
     final headers = await _headers(withAuth: true);
+    final body = <String, dynamic>{"contactId": contactId};
+    if (alias != null && alias.trim().isNotEmpty) {
+      body["alias"] = alias.trim();
+    }
     return http.post(
       Uri.parse("$baseUrl/contacts"),
       headers: headers,
-      body: jsonEncode({"contactId": contactId}),
+      body: jsonEncode(body),
     );
   }
 

@@ -5,6 +5,7 @@ import "package:flutter/material.dart";
 import "package:flutter/gestures.dart";
 import "package:audioplayers/audioplayers.dart";
 import "package:url_launcher/url_launcher.dart";
+import "package:flutter_linkify/flutter_linkify.dart";
 import "../theme/app_theme.dart";
 import "../i18n/locale_controller.dart";
 import "verified_badge.dart";
@@ -440,8 +441,31 @@ class _MessageBubbleState extends State<MessageBubble> {
     return spans;
   }
 
+  Future<void> _launchExternalUrl(String rawUrl) async {
+    String url = rawUrl;
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://$url";
+    }
+    final uri = Uri.tryParse(url);
+    if (uri != null) {
+      try {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } else {
+          await launchUrl(uri, mode: LaunchMode.platformDefault);
+        }
+      } catch (_) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    }
+  }
+
   Widget buildRichContent() {
-    final regex = RegExp(r"(@[a-zA-Z0-9_]{3,20})|(https?://[^\s]+)");
+    // Regex matching @mentions, standard URLs, www urls, whatsapp and messaging invite links
+    final regex = RegExp(
+      r"(@[a-zA-Z0-9_]{3,20})|((https?:\/\/|www\.)[^\s]+)|((wa\.me|chat\.whatsapp\.com|t\.me|syrix\.chat)\/[^\s]+)",
+      caseSensitive: false,
+    );
     final matches = regex.allMatches(widget.content);
     if (matches.isEmpty) {
       return RichText(
@@ -462,7 +486,10 @@ class _MessageBubbleState extends State<MessageBubble> {
         spans.add(
           TextSpan(
             text: token,
-            style: const TextStyle(color: SyrixColors.primary, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: SyrixColors.neonPurple,
+              fontWeight: FontWeight.w700,
+            ),
             recognizer: TapGestureRecognizer()
               ..onTap = () => widget.onMentionTap?.call(token.substring(1)),
           ),
@@ -471,9 +498,15 @@ class _MessageBubbleState extends State<MessageBubble> {
         spans.add(
           TextSpan(
             text: token,
-            style: const TextStyle(color: SyrixColors.cyan),
+            style: const TextStyle(
+              color: SyrixColors.cyan,
+              decoration: TextDecoration.underline,
+              decorationColor: SyrixColors.cyan,
+              decorationThickness: 1.5,
+              fontWeight: FontWeight.w600,
+            ),
             recognizer: TapGestureRecognizer()
-              ..onTap = () => launchUrl(Uri.parse(token), mode: LaunchMode.externalApplication),
+              ..onTap = () => _launchExternalUrl(token),
           ),
         );
       }

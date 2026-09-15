@@ -429,8 +429,11 @@ export async function reactToMessage(req: AuthedRequest, res: Response) {
   if (existingIndex >= 0) {
     message.reactions.splice(existingIndex, 1);
   } else {
-    message.reactions = message.reactions.filter((r: { userId: string }) => r.userId !== userId);
-    message.reactions.push({ userId, emoji });
+    const userReactionIndex = message.reactions.findIndex((r: { userId: string }) => r.userId === userId);
+    if (userReactionIndex >= 0) {
+      message.reactions.splice(userReactionIndex, 1);
+    }
+    (message.reactions as any).push({ userId, emoji });
   }
   await message.save();
 

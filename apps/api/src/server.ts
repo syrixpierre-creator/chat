@@ -134,14 +134,29 @@ app.get("/live/:liveId", async (req, res) => {
 </body></html>`);
 });
 
-const PORT = process.env.PORT || 3000;
+app.get("/", (req, res) => {
+  res.redirect("/admin");
+});
+
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err.name === "MongooseError" || err.name === "MongoNetworkError" || err.message?.includes("buffering timed out")) {
+    console.warn("[AI Studio] Database offline — returning fallback response");
+    if (req.method === "GET") {
+      return res.json(req.path.endsWith("s") || req.path.endsWith("s/") ? [] : {});
+    }
+    return res.status(503).json({ error: "Service temporarily unavailable (database offline)" });
+  }
+  next(err);
+});
+
+const PORT = Number(process.env.PORT) || 3000;
 
 async function start() {
-  await connectMongo();
-  await redis.ping();
+  await connectMongo().catch((err: any) => console.warn("Mongo startup warning:", err));
+  await redis.ping().catch((err: any) => console.warn("Redis ping warning:", err));
   const httpServer = http.createServer(app);
   setupWebSocketServer(httpServer);
-  httpServer.listen(PORT, () => {
+  httpServer.listen(PORT, "0.0.0.0", () => {
     console.log(`SYRIX CHAT API listening on port ${PORT}`);
     console.log(`WebSocket available at ws://localhost:${PORT}/ws`);
     if (!process.env.LIVEKIT_URL || process.env.LIVEKIT_URL.includes("localhost")) {

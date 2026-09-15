@@ -40,6 +40,9 @@ class _ChatScreenState extends State<ChatScreen> {
   List<Map<String, dynamic>> messages = [];
   String? currentUserId;
   String conversationType = "private";
+  String? conversationAvatarUrl;
+  String? conversationTitle;
+  int memberCount = 0;
   Map<String, dynamic>? otherUser;
   bool contactAdded = false;
   bool loading = true;
@@ -160,11 +163,17 @@ class _ChatScreenState extends State<ChatScreen> {
       if (detailsResponse.statusCode == 200) {
         final body = jsonDecode(detailsResponse.body);
         conversationType = body["type"] ?? "private";
+        conversationAvatarUrl = body["avatarUrl"];
+        conversationTitle = body["name"] ?? widget.title;
+        memberCount = body["memberCount"] ?? 0;
         selfDestructSeconds = body["selfDestructSeconds"] ?? 0;
         closedGroup = body["closedGroup"] ?? false;
         isGroupAdmin = body["isAdmin"] ?? false;
         if (conversationType == "private") {
           otherUser = body["otherUser"];
+          if (conversationAvatarUrl == null && otherUser?["avatarUrl"] != null) {
+            conversationAvatarUrl = otherUser!["avatarUrl"];
+          }
         }
       }
 
@@ -202,6 +211,17 @@ class _ChatScreenState extends State<ChatScreen> {
     wsClient.messages.listen((incoming) {
       if (incoming["messageEvent"] != null) {
         if (incoming["conversationId"] != widget.conversationId) return;
+        if (incoming["messageEvent"] == "conversationAvatarUpdated") {
+          setState(() => conversationAvatarUrl = incoming["avatarUrl"]);
+          return;
+        }
+        if (incoming["messageEvent"] == "conversationUpdated") {
+          setState(() {
+            if (incoming["name"] != null) conversationTitle = incoming["name"];
+            if (incoming["avatarUrl"] != null) conversationAvatarUrl = incoming["avatarUrl"];
+          });
+          return;
+        }
         if (incoming["messageEvent"] == "selfDestructChanged") {
           setState(() => selfDestructSeconds = incoming["selfDestructSeconds"] ?? 0);
           return;
@@ -702,11 +722,48 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> addContact() async {
     if (otherUser == null) return;
-    final response = await ApiClient.addContact(otherUser!["id"]);
+    final t = widget.localeController.t;
+    final aliasController = TextEditingController(text: otherUser!["username"] ?? "");
+    final alias = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SyrixColors.surface,
+        title: Text(t("contact_add_title"), style: const TextStyle(color: SyrixColors.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("@${otherUser!["username"] ?? ""}", style: const TextStyle(color: SyrixColors.textMuted, fontSize: 13)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: aliasController,
+              autofocus: true,
+              style: const TextStyle(color: SyrixColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: t("contact_add_hint_alias"),
+                labelStyle: const TextStyle(color: SyrixColors.textMuted),
+                filled: true,
+                fillColor: SyrixColors.surfaceAlt,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: SyrixColors.border)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: Text(t("profile_cancel"))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, aliasController.text.trim()),
+            child: Text(t("contact_add_save")),
+          ),
+        ],
+      ),
+    );
+    if (alias == null) return;
+    final response = await ApiClient.addContact(otherUser!["id"], alias: alias.isNotEmpty ? alias : null);
     if (response.statusCode == 201 && mounted) {
       setState(() => contactAdded = true);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.localeController.t("chat_contact_added"))),
+        SnackBar(content: Text(t("contact_add_success"))),
       );
     }
   }
@@ -773,17 +830,55 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 onChanged: runSearch,
               )
-            : !isGroup && otherUser?["isPremium"] == true
-                ? UsernameWithBadge(
-                    username: widget.title,
-                    isPremium: true,
-                    badgeSize: 15,
-                    style: const TextStyle(color: SyrixColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
-                  )
-                : Text(
-                    widget.title,
-                    style: const TextStyle(color: SyrixColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+            : GestureDetector(
+                onTap: isGroup
+                    ? openGroupSettings
+                    : () {
+                        if (otherUser != null) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => UserProfileScreen(
+                                userId: otherUser!["id"],
+                                localeController: widget.localeController,
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 19,
+                      backgroundColor: SyrixColors.surfaceAlt,
+                      backgroundImage: conversationAvatarUrl != null ? NetworkImage(conversationAvatarUrl!) : null,
+                      child: conversationAvatarUrl == null
+                          ? Icon(isGroup ? Icons.groups_rounded : Icons.person_rounded, size: 20, color: SyrixColors.primary)
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            conversationTitle ?? widget.title,
+                            style: const TextStyle(color: SyrixColors.textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            isGroup
+                                ? (memberCount > 0 ? "$memberCount participants" : "Groupe")
+                                : (otherUser?["username"] != null ? "@${otherUser!["username"]}" : "En ligne"),
+                            style: const TextStyle(color: SyrixColors.textMuted, fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
         iconTheme: const IconThemeData(color: SyrixColors.textPrimary),
         actions: searchMode
             ? [

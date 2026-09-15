@@ -10,7 +10,7 @@ import "../services/parental_control_service.dart";
 import "parental_control_screen.dart";
 import "home_chats_screen.dart";
 import "notifications_screen.dart";
-import "explorer_screen.dart";
+import "groups_screen.dart";
 import "live_screen.dart";
 import "profile_screen.dart";
 import "call_screen.dart";
@@ -148,7 +148,7 @@ class _MainShellState extends State<MainShell> with WidgetsBindingObserver {
     final t = widget.localeController.t;
     final screens = [
       HomeChatsScreen(localeController: widget.localeController),
-      ExplorerScreen(localeController: widget.localeController),
+      GroupsScreen(localeController: widget.localeController),
       LiveScreen(localeController: widget.localeController),
       NotificationsScreen(localeController: widget.localeController),
       ProfileScreen(localeController: widget.localeController),

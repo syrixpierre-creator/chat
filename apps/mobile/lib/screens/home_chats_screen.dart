@@ -631,10 +631,32 @@ class _HomeChatsScreenState extends State<HomeChatsScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: SyrixColors.primary,
-        onPressed: () => showCreateSheet(context, widget.localeController, loadData),
-        child: const Icon(Icons.add_rounded, color: Colors.white),
+      floatingActionButton: Container(
+        height: 56,
+        width: 56,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: const LinearGradient(
+            colors: [SyrixColors.neonPurple, SyrixColors.purpleLight],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: SyrixColors.neonPurple.withOpacity(0.4),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: () => showCreateSheet(context, widget.localeController, loadData),
+            child: const Icon(Icons.edit_rounded, color: Colors.white, size: 24),
+          ),
+        ),
       ),
     );
   }

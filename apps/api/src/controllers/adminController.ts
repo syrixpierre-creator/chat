@@ -9,12 +9,12 @@ import Story from "../models/Story.js";
 export async function getStats(req: AuthedRequest, res: Response) {
   const [userCount, verifiedCount, messageCount, conversationCount, activeLiveCount, activeStoryCount] =
     await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { isEmailVerified: true } }),
-      Message.countDocuments(),
-      Conversation.countDocuments(),
-      LiveSession.countDocuments({ status: "live" }),
-      Story.countDocuments({ expiresAt: { $gt: new Date() } })
+      prisma.user.count().catch(() => 0),
+      prisma.user.count({ where: { isEmailVerified: true } }).catch(() => 0),
+      Message.countDocuments().catch(() => 0),
+      Conversation.countDocuments().catch(() => 0),
+      LiveSession.countDocuments({ status: "live" }).catch(() => 0),
+      Story.countDocuments({ expiresAt: { $gt: new Date() } }).catch(() => 0)
     ]);
 
   return res.json({

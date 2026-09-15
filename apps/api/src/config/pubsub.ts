@@ -1,7 +1,7 @@
-import Redis from "ioredis";
+import { MockRedis } from "./redis.js";
 
-export const redisSubscriber = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
-export const redisPublisher = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+export const redisSubscriber = new MockRedis() as any;
+export const redisPublisher = new MockRedis() as any;
 
 export const MESSAGES_CHANNEL = "syrix:messages";
 

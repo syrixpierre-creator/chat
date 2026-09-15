@@ -1,0 +1,6 @@
+{
+  "name": "SYRIX CHAT",
+  "description": "Real-time chat, live streaming API and administrative web dashboard built with Express and Node.js.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

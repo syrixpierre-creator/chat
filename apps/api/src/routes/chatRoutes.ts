@@ -10,6 +10,7 @@ import {
   updateClosedGroup,
   regenerateInviteLink,
   joinByInviteCode,
+  joinGroupDirect,
   listMembers,
   promoteMember,
   demoteMember,
@@ -23,7 +24,8 @@ import {
   archiveConversation,
   unarchiveConversation,
   listArchivedConversations,
-  uploadGroupPhoto
+  uploadGroupPhoto,
+  deleteConversation
 } from "../controllers/chatController.js";
 import { requireAuth } from "../middleware/auth.js";
 import { upload } from "../config/upload.js";
@@ -35,10 +37,12 @@ router.get("/archived", requireAuth, listArchivedConversations);
 router.post("/private", requireAuth, startPrivateConversation);
 router.post("/group", requireAuth, createGroupOrCommunity);
 router.post("/join/:inviteCode", requireAuth, joinByInviteCode);
+router.post("/:conversationId/join", requireAuth, joinGroupDirect);
 router.get("/:communityId/groups", requireAuth, listCommunityGroups);
 router.post("/:conversationId/archive", requireAuth, archiveConversation);
 router.post("/:conversationId/unarchive", requireAuth, unarchiveConversation);
 router.get("/:conversationId", requireAuth, getConversationDetails);
+router.delete("/:conversationId", requireAuth, deleteConversation);
 router.patch("/:conversationId/settings", requireAuth, updateConversationSettings);
 router.post("/:conversationId/photo", requireAuth, upload.single("file"), uploadGroupPhoto);
 router.patch("/:conversationId/self-destruct", requireAuth, updateSelfDestruct);

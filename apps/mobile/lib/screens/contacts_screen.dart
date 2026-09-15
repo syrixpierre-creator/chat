@@ -110,6 +110,64 @@ class _ContactsScreenState extends State<ContactsScreen> {
     load();
   }
 
+  Future<void> showAddContactDialog() async {
+    final t = widget.localeController.t;
+    final idController = TextEditingController();
+    final aliasController = TextEditingController();
+    final added = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: SyrixColors.surface,
+        title: Text(t("contact_add_title"), style: const TextStyle(color: SyrixColors.textPrimary)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: idController,
+              autofocus: true,
+              style: const TextStyle(color: SyrixColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: "User ID / Username",
+                labelStyle: const TextStyle(color: SyrixColors.textMuted),
+                filled: true,
+                fillColor: SyrixColors.surfaceAlt,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: SyrixColors.border)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: aliasController,
+              style: const TextStyle(color: SyrixColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: t("contact_add_hint_alias"),
+                labelStyle: const TextStyle(color: SyrixColors.textMuted),
+                filled: true,
+                fillColor: SyrixColors.surfaceAlt,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: SyrixColors.border)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text(t("profile_cancel"))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(t("contact_add_save")),
+          ),
+        ],
+      ),
+    );
+    if (added == true && idController.text.trim().isNotEmpty) {
+      final res = await ApiClient.addContact(
+        idController.text.trim(),
+        alias: aliasController.text.trim().isNotEmpty ? aliasController.text.trim() : null,
+      );
+      if (res.statusCode == 201 || res.statusCode == 200) {
+        load();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = widget.localeController.t;
@@ -118,6 +176,13 @@ class _ContactsScreenState extends State<ContactsScreen> {
       appBar: AppBar(
         backgroundColor: SyrixColors.background,
         title: Text(t("contacts_title"), style: const TextStyle(color: SyrixColors.textPrimary)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add_rounded, color: SyrixColors.primary),
+            tooltip: t("contact_add_title"),
+            onPressed: showAddContactDialog,
+          ),
+        ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: SyrixColors.primary))

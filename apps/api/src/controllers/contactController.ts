@@ -5,7 +5,7 @@ import { createNotification } from "./notificationController.js";
 
 export async function addContact(req: AuthedRequest, res: Response) {
   const ownerId = req.user!.id;
-  const { contactId } = req.body;
+  const { contactId, alias } = req.body;
 
   if (!contactId || contactId === ownerId) {
     return res.status(400).json({ error: "invalid_contact" });
@@ -16,10 +16,12 @@ export async function addContact(req: AuthedRequest, res: Response) {
     return res.status(404).json({ error: "not_found" });
   }
 
+  const cleanAlias = typeof alias === "string" && alias.trim() ? alias.trim().slice(0, 50) : null;
+
   await prisma.contact.upsert({
     where: { ownerId_contactId: { ownerId, contactId } },
-    update: {},
-    create: { ownerId, contactId }
+    update: { ...(cleanAlias ? { alias: cleanAlias } : {}) },
+    create: { ownerId, contactId, alias: cleanAlias }
   });
 
   await createNotification({ userId: contactId, type: "contact_added", actorId: ownerId });
