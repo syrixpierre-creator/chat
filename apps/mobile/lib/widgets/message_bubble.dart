@@ -33,7 +33,7 @@ class MessageBubble extends StatefulWidget {
   final bool showSenderName;
   final Future<void> Function(String emoji)? onToggleReaction;
   final Future<void> Function()? onTogglePin;
-  final Future<String?> Function()? onEdit;
+  final Future<void> Function()? onEdit;
   final void Function(String username)? onMentionTap;
   final VoidCallback? onForward;
   final Future<String?> Function()? onTranslate;

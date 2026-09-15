@@ -6,6 +6,7 @@ class SyrixColors {
   static const surfaceAlt = Color(0xFF26223A);
   static const primary = Color(0xFF6C5CE7);
   static const neonPurple = Color(0xFF8A52F3);
+  static const purpleLight = Color(0xFFB794F6);
   static const primaryDark = Color(0xFF5A4BD1);
   static const cyan = Color(0xFF00E5FF);
   static const neonCyan = Color(0xFF00E5FF);
@@ -70,7 +71,7 @@ ThemeData buildSyrixTheme() {
       ),
       iconTheme: IconThemeData(color: SyrixColors.textPrimary),
     ),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: SyrixColors.surface,
       elevation: 0,
       margin: EdgeInsets.zero,
@@ -79,7 +80,7 @@ ThemeData buildSyrixTheme() {
         side: const BorderSide(color: SyrixColors.border),
       ),
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: SyrixColors.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(

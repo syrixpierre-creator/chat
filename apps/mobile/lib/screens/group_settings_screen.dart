@@ -10,6 +10,7 @@ import "../services/api_client.dart";
 import "group_members_screen.dart";
 import "group_audit_log_screen.dart";
 import "group_leaderboard_screen.dart";
+import "chat_screen.dart";
 
 class GroupSettingsScreen extends StatefulWidget {
   final LocaleController localeController;
@@ -229,9 +230,10 @@ class _GroupSettingsScreenState extends State<GroupSettingsScreen> {
       ),
     );
     if (name != null && name.isNotEmpty) {
-      final res = await ApiClient.createGroupOrCommunity(
+      final res = await ApiClient.createGroup(
         name,
-        type: "group",
+        isChannel ? "channel" : "group",
+        const [],
         communityId: widget.conversationId,
       );
       if (res.statusCode == 201 && mounted) {

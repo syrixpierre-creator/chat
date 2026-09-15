@@ -13,6 +13,7 @@ import "../services/ws_client.dart";
 import "../widgets/message_bubble.dart";
 import "../widgets/gift_sheet.dart";
 import "../widgets/verified_badge.dart";
+import "user_profile_screen.dart";
 import "group_settings_screen.dart";
 import "wallet_screen.dart";
 import "call_screen.dart";
